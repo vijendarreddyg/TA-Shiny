@@ -18,18 +18,18 @@ shinyServer(function(input,output,session){
    model <- reactive({
      
      if(input$selectModel == "english-ewt"){
-         model_name <- udpipe_load_model("C:\\Users\\sande\\OneDrive\\Documents\\ISB\\Text Analytics\\Assignments\\english-ewt-ud-2.4-190531.udpipe")
+         model_name <- udpipe_load_model("english-ewt-ud-2.4-190531.udpipe")
        
      }else if(input$selectModel == "english-gum"){
-       model_name <- udpipe_load_model("C:\\Users\\sande\\OneDrive\\Documents\\ISB\\Text Analytics\\Assignments\\english-ewt-ud-2.4-190531.udpipe")
+       model_name <- udpipe_load_model("english-gum-ud-2.4-190531.udpipe")
        
      }else if(input$selectModel =="english-lines"){
-       model_name <- udpipe_load_model("C:\\Users\\sande\\OneDrive\\Documents\\ISB\\Text Analytics\\Assignments\\english-ewt-ud-2.4-190531.udpipe")
+       model_name <- udpipe_load_model("english-lines-ud-2.4-190531.udpipe")
        
      }else if(input$selectModel =="english-partut"){
-       model_name <- udpipe_load_model("C:\\Users\\sande\\OneDrive\\Documents\\ISB\\Text Analytics\\Assignments\\english-ewt-ud-2.4-190531.udpipe")
+       model_name <- udpipe_load_model("english-partut-ud-2.4-190531.udpipe")
      }else{
-       model_name <- udpipe_load_model("C:\\Users\\sande\\OneDrive\\Documents\\ISB\\Text Analytics\\Assignments\\english-ewt-ud-2.4-190531.udpipe")
+       model_name <- udpipe_load_model("english-ewt-ud-2.4-190531.udpipe")
        
      }
    return(model_name)
@@ -38,11 +38,10 @@ shinyServer(function(input,output,session){
 annotated = reactive({
   tData = dataFile()
   clean_Data = str_replace_all(tData,"<.*?>","")
-  # str_re
   annotatedDf <- udpipe_annotate(model(),clean_Data)
   finalAnnotate <- select(as.data.frame(annotatedDf),-sentence)
   finalAnnotate
-  head(finalAnnotate,100)
+  head(finalAnnotate,input$annoSlide)
 }) 
 
 #display the data
@@ -57,8 +56,8 @@ output$wordCloud1 <- renderPlot({
    top_nouns = txt_freq(all_nouns$lemma)
    wordcloud(words = top_nouns$key, 
              freq = top_nouns$freq, 
-             min.freq = 2, 
-             max.words = 100,
+             min.freq = input$range[1], 
+             max.words = input$range[2],
              random.order = FALSE, 
              colors = brewer.pal(6, "Dark2"))
    }) #end of output$wc1
@@ -68,8 +67,8 @@ output$wordCloud2 <- renderPlot({
    top_verbs = txt_freq(all_verbs$lemma)
    wordcloud(words = top_verbs$key, 
              freq = top_verbs$freq, 
-             min.freq = 2, 
-             max.words = 100,
+             min.freq = input$range[1], 
+             max.words = input$range[2],
              random.order = FALSE, 
              colors = brewer.pal(6, "Dark2"))
 }) #end of wordcloud2
@@ -82,7 +81,7 @@ output$cogGraphs <- renderPlot({
       x = subset(data, upos %in% c(input$input_selection)), 
       term = "lemma", 
       group = c("doc_id", "paragraph_id", "sentence_id"))  # 0.02 secs
-   wordnetwork <- head(plot_cooc, 50)
+   wordnetwork <- head(plot_cooc, input$cogSlide)
    wordnetwork <- igraph::graph_from_data_frame(wordnetwork) # needs edgelist in first 2 colms.
    
    ggraph(wordnetwork, layout = "fr") +  
@@ -97,6 +96,22 @@ output$cogGraphs <- renderPlot({
    
    }) #end of coocc graphs
 
+#complete dataframe
+fullAnnotated = reactive({
+   tData = dataFile()
+   clean_Data = str_replace_all(tData,"<.*?>","")
+   annotatedDf <- udpipe_annotate(model(),clean_Data)
+   finalAnnotate <- select(as.data.frame(annotatedDf),-sentence)
+   return(finalAnnotate)
+})
 
+output$downloadData <- downloadHandler(
+   filename = function() {
+   "data.csv"
+   },
+   content = function(file) {
+      write.csv(fullAnnotated(), file)
+   }
+)
    }
 )#end of shinyserver
